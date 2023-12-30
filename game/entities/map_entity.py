@@ -13,13 +13,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-## General params
-WIDTH, HEIGHT = 800, 600
-WIDTH_H, HEIGHT_H = WIDTH // 2, HEIGHT // 2
-FPS = 60
+import pygame, copy, math, os, enum
+from typing import List
+from ..utils.sprite_utils import load_sprite
+from ..utils.params import *
 
-## Sprite Params
-PLAYER_SIZE = 50
-PLAYER_SIZE_H = PLAYER_SIZE // 2
-PLAYER_SPEED = 500
-PLAYER_FRAME_FACTOR = 12
+
+class MapEntity(pygame.sprite.Sprite):
+    def __init__(self, group):
+        super().__init__(group)
+        filename = "map.png"
+        total_path = os.path.join("game", "assets", "sprites", filename)
+        self.image = pygame.image.load(total_path)
+        self.image = pygame.transform.scale_by(self.image, 0.5)
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (0, 0)
+
+    def update(self):
+        pass

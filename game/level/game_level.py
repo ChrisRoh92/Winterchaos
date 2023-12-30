@@ -12,16 +12,52 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-import pygame
+import pygame, copy
 from typing import List
 from ..utils.params import *
 from .base_level import BaseLevel
 from ..entities.bierdurstmann_entity import Bierdurstmann
+from ..entities.map_entity import MapEntity
+
+
+class CameraGroup:
+    def __init__(self):
+        self.offset = pygame.Vector2()
+
+    def custom_drawing(self, player_group: pygame.sprite.GroupSingle, screen: pygame.Surface, *sprite_groups):
+        self.offset.x = (player_group.sprite.rect.centerx) - WIDTH_H
+        self.offset.y = (player_group.sprite.rect.centery) - HEIGHT_H
+
+
+        # player_group.sprite.rect = offset_rect
+        # player_group.sprite.pos = offset_rect.center
+
+        
+
+        
+
+        
+
+        for group in sprite_groups:
+            for sprite in group:
+                offset_rect = copy.deepcopy(sprite.rect)
+                offset_rect.center -= self.offset
+                screen.blit(sprite.image, offset_rect)
+
+
+        
+        offset_rect = copy.deepcopy(player_group.sprite.rect)
+        offset_rect.center -= self.offset
+        screen.blit(player_group.sprite.image, offset_rect)
+        # player_group.draw(screen)
 
 
 class GameLevel(BaseLevel):
     def __init__(self):
         self.player_group = pygame.sprite.GroupSingle()
+        self.map_group = pygame.sprite.GroupSingle()
+
+        self.camera = CameraGroup()
 
         self._init()
 
@@ -30,11 +66,14 @@ class GameLevel(BaseLevel):
     # ------------------------- #
 
     def update(self, dt:float, events: List[pygame.event.Event]):
+        self.map_group.update()
         self.player_group.update(dt, events)
 
     def render(self, screen: pygame.Surface):
         screen.fill('gray')
-        self.player_group.draw(screen)
+        self.camera.custom_drawing(self.player_group, screen, self.map_group)
+        # self.map_group.draw(screen)
+        # self.player_group.draw(screen)
 
     def reset(self):
         pass
@@ -48,3 +87,4 @@ class GameLevel(BaseLevel):
 
     def _init(self):
         self.player = Bierdurstmann(pygame.Vector2(WIDTH_H, HEIGHT_H), self.player_group)
+        self.map = MapEntity(self.map_group)
