@@ -14,22 +14,27 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 import pygame
 from typing import List
+from ..utils.params import *
 from .base_level import BaseLevel
+from ..entities.bierdurstmann_entity import Bierdurstmann
 
 
 class GameLevel(BaseLevel):
     def __init__(self):
-        pass
+        self.player_group = pygame.sprite.GroupSingle()
+
+        self._init()
 
     # ------------------------- #
     # 'Public Methods'          #
     # ------------------------- #
 
     def update(self, dt:float, events: List[pygame.event.Event]):
-        pass
+        self.player_group.update(dt, events)
 
     def render(self, screen: pygame.Surface):
-        pass
+        screen.fill('gray')
+        self.player_group.draw(screen)
 
     def reset(self):
         pass
@@ -40,3 +45,6 @@ class GameLevel(BaseLevel):
     # ------------------------- #
     # 'Private Methods'         #
     # ------------------------- #
+
+    def _init(self):
+        self.player = Bierdurstmann(pygame.Vector2(WIDTH_H, HEIGHT_H), self.player_group)

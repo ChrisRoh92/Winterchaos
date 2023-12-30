@@ -12,3 +12,26 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
+import pygame
+
+def load_sprite(file, start_col, start_row, num_cols, num_rows, total_rows, total_cols, size = None):
+    sheet = pygame.image.load(file).convert()
+    sheet.set_colorkey((255, 255, 255))
+
+    sheet_w, sheet_h = sheet.get_size()
+    sprite_w = sheet_w // total_cols
+    sprite_h = sheet_h // total_rows
+
+    sprites = []
+
+    for row in range(num_rows):
+        current_h = sprite_h * (row + start_row)
+        for col in range(num_cols):
+            current_w = sprite_w * (col + start_col)
+            image = sheet.subsurface(pygame.rect.Rect(current_w, current_h, sprite_w, sprite_h))
+            if size:
+                image = pygame.transform.scale(image, size).convert()
+                image.set_colorkey((255, 255, 255))
+            sprites.append(image)
+
+    return sprites

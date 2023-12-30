@@ -13,13 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-## General params
-WIDTH, HEIGHT = 800, 600
-WIDTH_H, HEIGHT_H = WIDTH // 2, HEIGHT // 2
-FPS = 60
 
-## Sprite Params
-PLAYER_SIZE = 50
-PLAYER_SIZE_H = PLAYER_SIZE // 2
-PLAYER_SPEED = 120
-PLAYER_FRAME_FACTOR = 12
+from abc import ABC, abstractmethod
+import enum, pygame, copy
+from typing import List
+
+class BaseEntity(pygame.sprite.Sprite):
+    def __init__(self, pos: pygame.Vector2, size: pygame.Vector2, group: pygame.sprite.Group):
+        super().__init__(group)
+
+        self.pos = copy.deepcopy(pos)
+
+        self.image = pygame.Surface(size, pygame.SRCALPHA)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos

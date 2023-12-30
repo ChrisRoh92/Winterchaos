@@ -31,7 +31,7 @@ class Game:
 
         self.events = pygame.event.get()
 
-        self.current_level = MainMenuLevel()
+        self.current_level = GameLevel()
         self.running = True
 
     def run(self):
