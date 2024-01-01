@@ -98,9 +98,29 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (int(self.pos.x), int(self.pos.y))
 
+    def _check_collision(self, collisionbox_groups: List[pygame.sprite.Group]):
+        for group in collisionbox_groups:
+            collisions = pygame.sprite.spritecollide(self, group, False)
+            if len(collisions) > 0:
+                ## Always only use the first detected collision for now!
+                
+                collision = collisions[0]
+                print(f"has collision with {collision}")
+                if self.direction.x > 0:
+                    self.pos.x = collision.rect.left - PLAYER_SIZE_H
+                elif self.direction.x < 0:
+                    self.pos.x = collision.rect.right + PLAYER_SIZE_H
+                elif self.direction.y > 0:
+                    self.pos.y = collision.rect.top - PLAYER_SIZE_H
+                elif self.direction.y < 0:
+                    self.pos.y = collision.rect.bottom + PLAYER_SIZE_H
+
+                self.rect.center = (int(self.pos.x), int(self.pos.y))
+                break
         
                                  
-    def update(self, dt, events: List[pygame.event.Event]):
+    def update(self, dt, events: List[pygame.event.Event], collisionbox_groups: List[pygame.sprite.Group]):
         self._handle_inputs(events)
         self._move(dt)
         self._animate(dt)
+        self._check_collision(collisionbox_groups)

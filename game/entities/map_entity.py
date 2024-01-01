@@ -14,7 +14,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import pygame, copy, math, os, enum
-from pytmx.util_pygame import load_pygame
 from typing import List
 from ..utils.sprite_utils import load_sprite
 from ..utils.params import *
@@ -26,21 +25,19 @@ class Tile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft = pos)
 
 class MapEntity(pygame.sprite.Sprite):
-    def __init__(self, group):
+    def __init__(self, layers, map_w, map_h, group):
         super().__init__(group)
-        filename = "map_tiled.tmx"
-        total_path = os.path.join("game", "assets", "tiled_map", filename)
-        # self.image = pygame.image.load(total_path)
-        # self.image = pygame.transform.scale_by(self.image, 0.5)
+
         self.tiles = pygame.sprite.Group()
-        self.tmx_data = load_pygame(total_path)
-        self.width = self.tmx_data.width * 16
-        self.height = self.tmx_data.height * 16
-        for layer in self.tmx_data.visible_layers:
+        self.layers = layers
+        self.width = map_w * 16
+        self.height = map_h * 16
+        for layer in self.layers:
             if hasattr(layer, 'data'):
                 for x,y,surf in layer.tiles():
                     pos = (x * 16, y * 16)
                     Tile(pos, surf, self.tiles)
+
         self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         self.rect = self.image.get_rect()
         self.rect.topleft = (0, 0)
