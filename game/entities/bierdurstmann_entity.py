@@ -36,6 +36,7 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self.default_frame = 0
         self.current_frame = 0
         self.time = 0
+        self.speed_factor = 1.0
         self._load_sprite()
                                  
     def _load_sprite(self):
@@ -55,6 +56,10 @@ class Bierdurstmann(pygame.sprite.Sprite):
     def _handle_inputs(self, events: List[pygame.event.Event]):
         keys = pygame.key.get_pressed()
         self.direction = pygame.Vector2()
+        if keys[pygame.K_LSHIFT]:
+            self.speed_factor = 2.0
+        else:
+            self.speed_factor = 1.0
         if keys[pygame.K_w]:
             if self.dir != 'up':
                 self.time = 0
@@ -80,7 +85,7 @@ class Bierdurstmann(pygame.sprite.Sprite):
             
 
     def _move(self, dt):
-        self.pos += self.direction * PLAYER_SPEED * dt
+        self.pos += self.direction * PLAYER_SPEED * dt * self.speed_factor
 
     def _animate(self, dt):
         self.time += dt * PLAYER_FRAME_FACTOR
@@ -91,7 +96,7 @@ class Bierdurstmann(pygame.sprite.Sprite):
 
         self.image = self.sprites[self.dir][self.current_frame]  
         self.rect = self.image.get_rect()
-        self.rect.center = self.pos
+        self.rect.center = (int(self.pos.x), int(self.pos.y))
 
         
                                  

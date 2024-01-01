@@ -14,12 +14,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## General params
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1200, 800
 WIDTH_H, HEIGHT_H = WIDTH // 2, HEIGHT // 2
 FPS = 60
 
 ## Sprite Params
-PLAYER_SIZE = 50
+PLAYER_SIZE = 30
 PLAYER_SIZE_H = PLAYER_SIZE // 2
-PLAYER_SPEED = 500
-PLAYER_FRAME_FACTOR = 12
+PLAYER_SPEED = 200
+PLAYER_FRAME_FACTOR = 10
