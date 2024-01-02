@@ -12,24 +12,32 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-import pygame, copy, os
+import pygame, copy, os, enum
 from pytmx.util_pygame import load_pygame
 from typing import List
 from ..utils.params import *
-from ..utils.utils import drawText
 from .base_level import BaseLevel
 from ..entities.bierdurstmann_entity import Bierdurstmann
 from ..entities.boxes_entity import CollisionBox, TrashBin
 from ..entities.map_entity import MapEntity
+from .game_level_stuff.info_boxes import GameMenu, GameInfoPanel, InteractionTextBox, InventoryMenu
 
+class GAME_WORLDS(enum.Enum):
+    UNDEFINED = 0
+    NORMAL_WORLD = 1
+    ROSSKNECHT_WORLD = 2
+    REWE_WORLD = 3
+    AUSNUECHTERUNGSZELLE_WORLD = 4
+    HOME_BIERDURSTMANN_WORLD = 5
+    WERSTOFFHOF_WORLD = 6
 
 class CameraGroup:
     def __init__(self):
         self.offset = pygame.Vector2()
 
     def custom_drawing(self, player_group: pygame.sprite.GroupSingle, screen: pygame.Surface, *sprite_groups):
-        self.offset.x = (player_group.sprite.rect.centerx) - WIDTH_H
-        self.offset.y = (player_group.sprite.rect.centery) - HEIGHT_H
+        self.offset.x = int(player_group.sprite.pos.x) - WIDTH_H
+        self.offset.y = int(player_group.sprite.pos.y) - HEIGHT_H
         
         for group in sprite_groups:
             for sprite in group:
@@ -41,113 +49,14 @@ class CameraGroup:
         offset_rect.center -= self.offset
         screen.blit(player_group.sprite.image, offset_rect)
 
-class GameMenu(pygame.sprite.Sprite):
-    def __init__(self, group):
-        super().__init__(group)
-
-        self.image = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        self.rect = self.image.get_rect()
-        self.rect.topleft = (0, 0)
-
-        self.background = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        self.background.fill("gray")
-        self.background.set_alpha(150)
-        self.background_rect = self.image.get_rect()
-        self.background_rect.topleft = (0, 0)
-
-        self.w = WIDTH * 0.5
-        self.h = HEIGHT * 0.8
-        self.menu_image = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
-        self.menu_image.fill('white')
-        self.menu_rect = self.menu_image.get_rect(center = (WIDTH_H, HEIGHT_H))
-
-        self.image.blit(self.background, self.background_rect)
-        self.image.blit(self.menu_image, self.menu_rect)
-
-class GameInfoPanel(pygame.sprite.Sprite):
-    def __init__(self, group):
-        super().__init__(group)
-
-        self.image = pygame.Surface((WIDTH, 40), pygame.SRCALPHA)
-        self.image.fill('white')
-        self.image.set_alpha(255)
-        self.rect = self.image.get_rect(topleft = (0, 0))
-
-        self.money = 0
-        self.suff_level = 0
-        self.bierdurst = 0
-
-        self.font = pygame.font.Font(None, 32)
-
-        self._draw_content()
-
-    def _draw_content(self):
-        self.image.fill('white')
-
-        money_text = self.font.render(f"Geld: {self.money:.2f} €", True, (0, 0, 0))
-        sufflevel_text = self.font.render(f"Suff: {self.suff_level}", True, (0, 0, 0))
-        bierdurst_text = self.font.render(f"Bierdurst: {self.bierdurst}", True, (0, 0, 0))
-
-
-        money_rect = money_text.get_rect()
-        money_rect.midleft = (20, 20)
-        sufflevel_rect = sufflevel_text.get_rect()
-        sufflevel_rect.midright = (WIDTH - 20, 20)
-        bierdurst_rect = bierdurst_text.get_rect()
-        bierdurst_rect.center = (WIDTH_H, 20)
-
-        self.image.blit(money_text, money_rect)
-        self.image.blit(sufflevel_text, sufflevel_rect)
-        self.image.blit(bierdurst_text, bierdurst_rect)
-
-
-    def update(self, money, bierdurst, suff):
-        self.money = money
-        self.bierdurst = bierdurst
-        self.suff_level = suff
-        self._draw_content()
-
-class InteractionTextBox(pygame.sprite.Sprite):
-    def __init__(self, group: pygame.sprite.GroupSingle):
-        super().__init__(group)
-
-        self.w = 0.5 * WIDTH
-        self.h = 0.2 * HEIGHT
-
-        self.image = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
-        self.rect = self.image.get_rect()
-        self.rect.midbottom = (WIDTH_H, HEIGHT - 20)
-
-        self.font = pygame.font.Font(None, 24)
-        self.hintfont = pygame.font.Font(None, 18)
-        self.msg = ""
-
-    def _draw_message(self):
-        self.image.fill(pygame.SRCALPHA)
-
-        pygame.draw.rect(self.image, 'white', pygame.rect.Rect(0, 0, self.w, self.h), 0, 20)
-
-        drawText(self.image, self.msg, (0, 0, 0), self.font, True)
-
-        # show disappear hints:
-
-        text = self.hintfont.render("Drücke Enter zum Fortfahren...", True, (0, 0, 0))
-        text_rect = text.get_rect()
-        text_rect.midbottom = (self.w // 2, self.h - 20)
-
-        self.image.blit(text, text_rect)
-
-    def set_msg(self, msg):
-        self.msg = msg
-
-    def update(self):
-        self._draw_message()
 
 class GameLevel(BaseLevel):
     def __init__(self):
         self.player_group = pygame.sprite.GroupSingle()
         ## TODO: could the next GroupSingle live in Bierdurstmann class?
         self.interaction_box_group = pygame.sprite.GroupSingle()
+
+        self.current_world = GAME_WORLDS.NORMAL_WORLD 
 
         self.map_group = pygame.sprite.GroupSingle()
         self.collisionbox_groups = pygame.sprite.Group()
@@ -157,14 +66,18 @@ class GameLevel(BaseLevel):
         self.menu_group = pygame.sprite.GroupSingle()
         self.info_panel_group = pygame.sprite.GroupSingle()
         self.interaction_text_group = pygame.sprite.GroupSingle()
-
-        self.camera = CameraGroup()
+        self.inventory_menu_group = pygame.sprite.GroupSingle()
+        ## Panel, Menu and TextBox states
         self.show_menu = False
         self.show_message = False
+        self.show_inventory = False
+        ## Init Panels and TextBoxes:
         self.menu = GameMenu(self.menu_group)
         self.info_panel = GameInfoPanel(self.info_panel_group)
+        self.inventory = InventoryMenu(self.inventory_menu_group)
         self.interaction_textbox = InteractionTextBox(self.interaction_text_group)
 
+        self.camera = CameraGroup()
         self._init()
 
     # ------------------------- #
@@ -176,17 +89,14 @@ class GameLevel(BaseLevel):
         self.interaction_textbox.set_msg(msg)
         self.interaction_textbox._draw_message()
 
-    def _update_panel(self):
-        money, bierdurst, suff = self.player.get_data()
-        self.info_panel_group.update(money, bierdurst, suff)
-
     def update(self, dt:float, events: List[pygame.event.Event]):
         self._handle_events(events)
         if self.show_message:
             pass
-            # self.interaction_box_group.update()
         elif self.show_menu:
             pass
+        elif self.show_inventory:
+            self.inventory_menu_group.update(self.player.inventory)
         else:
             self.map_group.update()
             self.trash_bins_group.update(dt)
@@ -195,13 +105,20 @@ class GameLevel(BaseLevel):
         
 
     def render(self, screen: pygame.Surface):
-        screen.fill('gray')
+        ## Delete content
+        screen.fill('black')
+        
+
         self.camera.custom_drawing(self.player_group, screen, self.map_group, self.trash_bins_group, self.interaction_box_group)
+        
+        ## Drawing Menus and Panels
         self.info_panel_group.draw(screen)
         if self.show_menu:
             self.menu_group.draw(screen)
-        if self.show_message:
+        elif self.show_message:
             self.interaction_text_group.draw(screen)
+        elif self.show_inventory:
+            self.inventory_menu_group.draw(screen)
 
 
     def reset(self):
@@ -213,6 +130,9 @@ class GameLevel(BaseLevel):
     # ------------------------- #
     # 'Private Methods'         #
     # ------------------------- #
+    def _update_panel(self):
+        money, bierdurst, suff = self.player.get_data()
+        self.info_panel_group.update(money, bierdurst, suff)
 
     def _handle_events(self, events: List[pygame.event.Event]):
         for e in events:
@@ -222,9 +142,14 @@ class GameLevel(BaseLevel):
                 elif e.key == pygame.K_ESCAPE:
                     if self.show_menu:
                         self.show_menu = False
+                    elif self.show_inventory:
+                        self.show_inventory = False
                 elif e.key == pygame.K_RETURN:
                     if self.show_message:
                         self.show_message = False
+                elif e.key == pygame.K_i:
+                    if not self.show_inventory:
+                        self.show_inventory = True
 
     def _init(self):
         filename = "map_tiled.tmx"

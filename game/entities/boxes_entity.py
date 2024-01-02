@@ -54,9 +54,25 @@ class TrashBin(pygame.sprite.Sprite):
         }
 
     def _generate_msg(self):
-        
-        msg = f"Du hast folgende Gegenstände gefunden: Flaschen: {self.content['bottle']} Dosen: {self.content['bottle']} Müll: {self.content['trash']} Geld: {self.content['money']:.2f} €"
-        return msg
+        if self.content['bottle'] == 0 and self.content['can'] == 0 and self.content['trash'] == 0 and self.content['money'] == 0:
+            return "Der Mülleimer ist leer"
+        else:
+            bottle_msg = ""
+            can_msg = ""
+            trash_msg = ""
+            money_msg = ""
+            if self.content['bottle'] > 0:
+                bottle_msg = f"{self.content['bottle']} Pfandflaschen"
+            if self.content['can'] > 0:
+                can_msg = f"{self.content['can']} Pfanddosen"
+            if self.content['trash'] > 0:
+                trash_msg = f"{self.content['trash']} Stücke Müll"
+            if self.content['money'] > 0:
+                money_msg = f"{self.content['money']:.2f} € an Geld"
+
+
+            msg = f"Du hast folgende Gegenstände gefunden:        {bottle_msg} {can_msg} {trash_msg} {money_msg}"
+            return msg
 
     def interact(self):
         msg = self._generate_msg()

@@ -49,8 +49,8 @@ class InteractionBox(pygame.sprite.Sprite):
 class BierdurstmannInventory:
     def __init__(self):
         self.content = {
-            'money' : 15,
-            "beer" : 10,
+            'money' : 0.0,
+            "beer" : 0,
             "bottle": 0,
             "can" : 0,
             "trash" : 0
@@ -136,9 +136,11 @@ class Bierdurstmann(pygame.sprite.Sprite):
                 if e.key == pygame.K_SPACE:
                     self.interact = True
                 if e.key == pygame.K_b:
-                    if self.inventory.content['bier'] > 0:
+                    if self.inventory.content['beer'] > 0:
                         self.state.drink_beer()
-                        self.inventory.content['bier'] -= 1
+                        self.inventory.content['beer'] -= 1
+                    else:
+                        self.show_message("Du hast kein Bier mehr!")
 
 
 
@@ -172,11 +174,11 @@ class Bierdurstmann(pygame.sprite.Sprite):
             self.time = 0
             
     def _move(self, dt):
-
-        self.pos += self.direction * PLAYER_SPEED * dt * self.speed_factor
+        reduce_speed_factor = interpolate(self.state.suff, 0, 15, 1.0, 0.2)
+        self.pos += self.direction * PLAYER_SPEED * dt * self.speed_factor * reduce_speed_factor
         ## Handle Suff Level
         if self.state.suff > 0:
-            sin_value = math.sin(self.timstamp * 1.0 * self.state.suff) * 1 + math.cos(self.timstamp * 1.0 * self.state.suff) * 1
+            sin_value = math.sin(self.timstamp * 1.0 * self.state.suff) * 1 + math.cos(self.timstamp * 1.0/self.state.suff) * 1
             amplitude = interpolate(self.state.suff, 0, 15, 0, 2)
             if abs(self.direction.x) > 0:
                 self.pos.y += sin_value * amplitude
