@@ -18,6 +18,12 @@ from typing import List
 from .boxes_entity import TrashBin
 from ..utils.sprite_utils import load_sprite
 from ..utils.params import *
+from ..utils.utils import interpolate
+
+class INTERACTION_TYPES(enum.Enum):
+    UNDEFINED = 0
+    TRASH_BIN_INTERACTION = 1
+    OTHER_PLAYER_INTERACTION = 2
 
 
 class InteractionBox(pygame.sprite.Sprite):
@@ -34,14 +40,28 @@ class InteractionBox(pygame.sprite.Sprite):
         if len(collisions) > 0:
             obj = collisions[0]
             if isinstance(obj, TrashBin):
-                obj.show_content()
+                content, msg = obj.interact()
+                return {"type": INTERACTION_TYPES.TRASH_BIN_INTERACTION, "msg": msg, "content": content}
+            
+        return {"type": INTERACTION_TYPES.UNDEFINED, "msg": None, "content": None}
+        
 
 class BierdurstmannInventory:
     def __init__(self):
         self.content = {
             'money' : 15,
-            "bier" : 10
+            "beer" : 10,
+            "bottle": 0,
+            "can" : 0,
+            "trash" : 0
         }
+
+
+    def add_trash_bin_content(self, content:dict):
+        self.content['money'] += content['money']
+        self.content['bottle'] += content['bottle']
+        self.content['can'] += content['can']
+        self.content['trash'] += content['trash']
 
 STATE_TIME = 10
 class BierdurstmannState:
@@ -65,10 +85,16 @@ class BierdurstmannState:
             self.suff = max(0, self.suff)
 
 class Bierdurstmann(pygame.sprite.Sprite):
-    def __init__(self, pos: pygame.Vector2, group: pygame.sprite.GroupSingle, interaction_box_group: pygame.sprite.GroupSingle):
+    def __init__(
+            self, 
+            pos: pygame.Vector2, 
+            group: pygame.sprite.GroupSingle, 
+            interaction_box_group: pygame.sprite.GroupSingle,
+            show_message: callable):
         super().__init__(group)
 
         self.pos = copy.deepcopy(pos)
+        self.show_message = show_message
         self.interaction_box = InteractionBox(self.pos, interaction_box_group)
 
         self.inventory = BierdurstmannInventory()
@@ -85,6 +111,7 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self.default_frame = 0
         self.current_frame = 0
         self.time = 0
+        self.timstamp = 0
         self.speed_factor = 1.0
         self._load_sprite()
                                  
@@ -145,7 +172,16 @@ class Bierdurstmann(pygame.sprite.Sprite):
             self.time = 0
             
     def _move(self, dt):
+
         self.pos += self.direction * PLAYER_SPEED * dt * self.speed_factor
+        ## Handle Suff Level
+        if self.state.suff > 0:
+            sin_value = math.sin(self.timstamp * 1.0 * self.state.suff) * 1 + math.cos(self.timstamp * 1.0 * self.state.suff) * 1
+            amplitude = interpolate(self.state.suff, 0, 15, 0, 2)
+            if abs(self.direction.x) > 0:
+                self.pos.y += sin_value * amplitude
+            elif abs(self.direction.y) > 0:
+                self.pos.x += sin_value * amplitude
 
     def _animate(self, dt):
         self.time += dt * PLAYER_FRAME_FACTOR
@@ -190,9 +226,20 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self.interaction_box.rect = new_rect
 
     def _check_interaction(self, collisionbox_groups: List[pygame.sprite.Group]):
-        self.interaction_box.check(collisionbox_groups[1])
+        data = self.interaction_box.check(collisionbox_groups[1])
+        return data
+    
+    def _handle_post_interaction(self, data: dict):
+        if data['type'] == INTERACTION_TYPES.TRASH_BIN_INTERACTION:
+            self.inventory.add_trash_bin_content(data['content'])
+            self.show_message(data['msg'])
+        elif data['type'] == INTERACTION_TYPES.OTHER_PLAYER_INTERACTION:
+            pass
+        else:
+            pass
 
     def update(self, dt, events: List[pygame.event.Event], collisionbox_groups: List[pygame.sprite.Group]):
+        self.timstamp += dt
         self._handle_inputs(events)
         self._move(dt)
         self._animate(dt)
@@ -200,7 +247,9 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self._move_interaction_box()
         self.state.update(dt)
         if self.interact:
-            self._check_interaction(collisionbox_groups)
+            data = self._check_interaction(collisionbox_groups)
+            self._handle_post_interaction(data)
+            
 
 
     def get_data(self):

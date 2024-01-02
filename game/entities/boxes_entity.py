@@ -36,14 +36,33 @@ class TrashBin(pygame.sprite.Sprite):
         ## TODO(chrohne): Max size of trash bin, so the bierdurstmann should collect the trash
         ## and bring it to the recycling center, so there is more space for bottles/cans
         self.content = {
-            "Flasche" : 0,
-            "Dosen" : 0,
-            "Müll": 0,
-            "Geld" : 0
+            "bottle" : 0,
+            "can" : 0,
+            "trash": 0,
+            "money" : 0
         }
 
         self.time = 0
         self.renew_time = random.randint(TRASH_BIN_CONTENT_UPDATE_MIN, TRASH_BIN_CONTENT_UPDATE_MAX)
+    
+    def _reset(self):
+        self.content = {
+            "bottle" : 0,
+            "can" : 0,
+            "trash": 0,
+            "money" : 0
+        }
+
+    def _generate_msg(self):
+        
+        msg = f"Du hast folgende Gegenstände gefunden: Flaschen: {self.content['bottle']} Dosen: {self.content['bottle']} Müll: {self.content['trash']} Geld: {self.content['money']:.2f} €"
+        return msg
+
+    def interact(self):
+        msg = self._generate_msg()
+        content = copy.deepcopy(self.content)
+        self._reset()
+        return content, msg
 
     def show_content(self):
         print(f"content: {self.content}, time: {self.time}, renew_time: {self.renew_time}")
@@ -57,19 +76,19 @@ class TrashBin(pygame.sprite.Sprite):
                 num_bottles_cans = random.randint(0, TRASH_BIN_MAX_CANS_BOTTLES_RANDOM)
                 foo = random.randint(0, 1)
                 if foo == 0:
-                    self.content["Dosen"] += num_bottles_cans
-                    self.content["Dosen"] = min(self.content["Dosen"], TRASH_BIN_MAX_CANS_BOTTLES)
+                    self.content["can"] += num_bottles_cans
+                    self.content["can"] = min(self.content["can"], TRASH_BIN_MAX_CANS_BOTTLES)
                 else:
-                    self.content["Flasche"] += num_bottles_cans
-                    self.content["Flasche"] = min(self.content["Flasche"], TRASH_BIN_MAX_CANS_BOTTLES)
+                    self.content["bottle"] += num_bottles_cans
+                    self.content["bottle"] = min(self.content["bottle"], TRASH_BIN_MAX_CANS_BOTTLES)
             else:
                 num_trash = random.randint(0, 1)
-                self.content["Müll"] += num_trash
-                self.content["Müll"] = min(self.content["Müll"], 2)
+                self.content["trash"] += num_trash
+                self.content["trash"] = min(self.content["trash"], 2)
 
         else:
             money = random.uniform(0, TRASH_BIN_MAX_MONEY)
-            self.content["Geld"] += money
+            self.content["money"] += money
 
     def update(self, dt):
         self.time += dt

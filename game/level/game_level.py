@@ -16,6 +16,7 @@ import pygame, copy, os
 from pytmx.util_pygame import load_pygame
 from typing import List
 from ..utils.params import *
+from ..utils.utils import drawText
 from .base_level import BaseLevel
 from ..entities.bierdurstmann_entity import Bierdurstmann
 from ..entities.boxes_entity import CollisionBox, TrashBin
@@ -83,7 +84,7 @@ class GameInfoPanel(pygame.sprite.Sprite):
     def _draw_content(self):
         self.image.fill('white')
 
-        money_text = self.font.render(f"Geld: {self.money}", True, (0, 0, 0))
+        money_text = self.font.render(f"Geld: {self.money:.2f} €", True, (0, 0, 0))
         sufflevel_text = self.font.render(f"Suff: {self.suff_level}", True, (0, 0, 0))
         bierdurst_text = self.font.render(f"Bierdurst: {self.bierdurst}", True, (0, 0, 0))
 
@@ -106,34 +107,87 @@ class GameInfoPanel(pygame.sprite.Sprite):
         self.suff_level = suff
         self._draw_content()
 
+class InteractionTextBox(pygame.sprite.Sprite):
+    def __init__(self, group: pygame.sprite.GroupSingle):
+        super().__init__(group)
+
+        self.w = 0.5 * WIDTH
+        self.h = 0.2 * HEIGHT
+
+        self.image = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+        self.rect = self.image.get_rect()
+        self.rect.midbottom = (WIDTH_H, HEIGHT - 20)
+
+        self.font = pygame.font.Font(None, 24)
+        self.hintfont = pygame.font.Font(None, 18)
+        self.msg = ""
+
+    def _draw_message(self):
+        self.image.fill(pygame.SRCALPHA)
+
+        pygame.draw.rect(self.image, 'white', pygame.rect.Rect(0, 0, self.w, self.h), 0, 20)
+
+        drawText(self.image, self.msg, (0, 0, 0), self.font, True)
+
+        # show disappear hints:
+
+        text = self.hintfont.render("Drücke Enter zum Fortfahren...", True, (0, 0, 0))
+        text_rect = text.get_rect()
+        text_rect.midbottom = (self.w // 2, self.h - 20)
+
+        self.image.blit(text, text_rect)
+
+    def set_msg(self, msg):
+        self.msg = msg
+
+    def update(self):
+        self._draw_message()
 
 class GameLevel(BaseLevel):
     def __init__(self):
         self.player_group = pygame.sprite.GroupSingle()
+        ## TODO: could the next GroupSingle live in Bierdurstmann class?
         self.interaction_box_group = pygame.sprite.GroupSingle()
-        self.menu_group = pygame.sprite.GroupSingle()
-        self.info_panel_group = pygame.sprite.GroupSingle()
+
         self.map_group = pygame.sprite.GroupSingle()
         self.collisionbox_groups = pygame.sprite.Group()
         self.trash_bins_group = pygame.sprite.Group()
 
+        ## Text and Menus
+        self.menu_group = pygame.sprite.GroupSingle()
+        self.info_panel_group = pygame.sprite.GroupSingle()
+        self.interaction_text_group = pygame.sprite.GroupSingle()
+
         self.camera = CameraGroup()
         self.show_menu = False
+        self.show_message = False
         self.menu = GameMenu(self.menu_group)
         self.info_panel = GameInfoPanel(self.info_panel_group)
+        self.interaction_textbox = InteractionTextBox(self.interaction_text_group)
 
         self._init()
 
     # ------------------------- #
     # 'Public Methods'          #
     # ------------------------- #
+
+    def show_interaction_box(self, msg):
+        self.show_message = True
+        self.interaction_textbox.set_msg(msg)
+        self.interaction_textbox._draw_message()
+
     def _update_panel(self):
         money, bierdurst, suff = self.player.get_data()
         self.info_panel_group.update(money, bierdurst, suff)
 
     def update(self, dt:float, events: List[pygame.event.Event]):
         self._handle_events(events)
-        if not self.show_menu:
+        if self.show_message:
+            pass
+            # self.interaction_box_group.update()
+        elif self.show_menu:
+            pass
+        else:
             self.map_group.update()
             self.trash_bins_group.update(dt)
             self.player_group.update(dt, events, [self.collisionbox_groups, self.trash_bins_group])
@@ -146,10 +200,9 @@ class GameLevel(BaseLevel):
         self.info_panel_group.draw(screen)
         if self.show_menu:
             self.menu_group.draw(screen)
+        if self.show_message:
+            self.interaction_text_group.draw(screen)
 
-        # self.collisionbox_groups.draw(screen)
-        # self.map_group.draw(screen)
-        # self.player_group.draw(screen)
 
     def reset(self):
         pass
@@ -166,9 +219,12 @@ class GameLevel(BaseLevel):
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_q:
                     self.show_menu = True
-                if e.key == pygame.K_ESCAPE:
+                elif e.key == pygame.K_ESCAPE:
                     if self.show_menu:
                         self.show_menu = False
+                elif e.key == pygame.K_RETURN:
+                    if self.show_message:
+                        self.show_message = False
 
     def _init(self):
         filename = "map_tiled.tmx"
@@ -201,4 +257,4 @@ class GameLevel(BaseLevel):
             elif group.name == "player":
                 obj = group[0]
                 pos = pygame.Vector2(obj.x, obj.y)
-                self.player = Bierdurstmann(pos, self.player_group, self.interaction_box_group)
+                self.player = Bierdurstmann(pos, self.player_group, self.interaction_box_group, self.show_interaction_box)
