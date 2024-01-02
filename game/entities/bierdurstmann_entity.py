@@ -15,23 +15,72 @@
 
 import pygame, copy, math, os, enum
 from typing import List
+from .boxes_entity import TrashBin
 from ..utils.sprite_utils import load_sprite
 from ..utils.params import *
 
 
-
-
-class Bierdurstmann(pygame.sprite.Sprite):
-    def __init__(self, pos: pygame.Vector2, group: pygame.sprite.GroupSingle):
+class InteractionBox(pygame.sprite.Sprite):
+    def __init__(self, pos, group: pygame.sprite.GroupSingle):
         super().__init__(group)
 
         self.pos = copy.deepcopy(pos)
         self.image = pygame.Surface((PLAYER_SIZE, PLAYER_SIZE), pygame.SRCALPHA)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
+
+    def check(self, group: pygame.sprite.Group):
+        collisions = pygame.sprite.spritecollide(self, group, False)
+        if len(collisions) > 0:
+            obj = collisions[0]
+            if isinstance(obj, TrashBin):
+                obj.show_content()
+
+class BierdurstmannInventory:
+    def __init__(self):
+        self.content = {
+            'money' : 15,
+            "bier" : 10
+        }
+
+STATE_TIME = 10
+class BierdurstmannState:
+    def __init__(self):
+
+        self.health = 100
+        self.bierdurst = 0
+        self.suff = 0
+
+        self.time = 0
+
+    def drink_beer(self):
+        self.suff += 1
+        self.time = 0
+
+    def update(self, dt):
+        self.time += dt
+        if self.time > STATE_TIME:
+            self.time = 0
+            self.suff -= 1
+            self.suff = max(0, self.suff)
+
+class Bierdurstmann(pygame.sprite.Sprite):
+    def __init__(self, pos: pygame.Vector2, group: pygame.sprite.GroupSingle, interaction_box_group: pygame.sprite.GroupSingle):
+        super().__init__(group)
+
+        self.pos = copy.deepcopy(pos)
+        self.interaction_box = InteractionBox(self.pos, interaction_box_group)
+
+        self.inventory = BierdurstmannInventory()
+        self.state = BierdurstmannState()
+        
+        self.image = pygame.Surface((PLAYER_SIZE, PLAYER_SIZE), pygame.SRCALPHA)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos
         self.direction = pygame.Vector2()
         
         self.dir = "left"
+        self.interact = False
 
         self.default_frame = 0
         self.current_frame = 0
@@ -54,6 +103,18 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self.rect.center = self.pos
 
     def _handle_inputs(self, events: List[pygame.event.Event]):
+        self.interact = False
+        for e in events:
+            if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_SPACE:
+                    self.interact = True
+                if e.key == pygame.K_b:
+                    if self.inventory.content['bier'] > 0:
+                        self.state.drink_beer()
+                        self.inventory.content['bier'] -= 1
+
+
+
         keys = pygame.key.get_pressed()
         self.direction = pygame.Vector2()
         if keys[pygame.K_LSHIFT]:
@@ -83,7 +144,6 @@ class Bierdurstmann(pygame.sprite.Sprite):
         else:
             self.time = 0
             
-
     def _move(self, dt):
         self.pos += self.direction * PLAYER_SPEED * dt * self.speed_factor
 
@@ -105,7 +165,6 @@ class Bierdurstmann(pygame.sprite.Sprite):
                 ## Always only use the first detected collision for now!
                 
                 collision = collisions[0]
-                print(f"has collision with {collision}")
                 if self.direction.x > 0:
                     self.pos.x = collision.rect.left - PLAYER_SIZE_H
                 elif self.direction.x < 0:
@@ -117,10 +176,32 @@ class Bierdurstmann(pygame.sprite.Sprite):
 
                 self.rect.center = (int(self.pos.x), int(self.pos.y))
                 break
-        
-                                 
+    
+    def _move_interaction_box(self):
+        new_rect = copy.deepcopy(self.interaction_box.rect)
+        if self.direction.x > 0:
+            new_rect.bottomleft = self.rect.bottomright
+        elif self.direction.x < 0:
+            new_rect.bottomright = self.rect.bottomleft
+        elif self.direction.y > 0:
+            new_rect.topleft = self.rect.bottomleft
+        elif self.direction.y < 0:
+            new_rect.bottomleft = self.rect.topleft
+        self.interaction_box.rect = new_rect
+
+    def _check_interaction(self, collisionbox_groups: List[pygame.sprite.Group]):
+        self.interaction_box.check(collisionbox_groups[1])
+
     def update(self, dt, events: List[pygame.event.Event], collisionbox_groups: List[pygame.sprite.Group]):
         self._handle_inputs(events)
         self._move(dt)
         self._animate(dt)
         self._check_collision(collisionbox_groups)
+        self._move_interaction_box()
+        self.state.update(dt)
+        if self.interact:
+            self._check_interaction(collisionbox_groups)
+
+
+    def get_data(self):
+        return self.inventory.content['money'],  self.state.bierdurst, self.state.suff
