@@ -18,6 +18,8 @@ from typing import List
 from ..utils.sprite_utils import load_sprite
 from ..utils.params import *
 
+
+
 class PORTAL_DESTINATION(enum.Enum):
     TO_NORMAL_WORLD = 1
     TO_REWE_WOLRD = 2
@@ -27,6 +29,17 @@ def map_str_destination(destination: str)-> PORTAL_DESTINATION:
         return PORTAL_DESTINATION.TO_NORMAL_WORLD
     elif destination == "to_rewe_world":
         return PORTAL_DESTINATION.TO_REWE_WOLRD
+
+class Pfandautomat(pygame.sprite.Sprite):
+    def __init__(self, pos, size, group):
+        super().__init__(group)
+
+        self.image = pygame.Surface(size, pygame.SRCALPHA)
+        self.rect = self.image.get_rect(topleft = pos)
+
+
+    def interact(self):
+        print("Interact with Pfandautomat")
 
 class CollisionBox(pygame.sprite.Sprite):
     def __init__(self, pos, size, group):

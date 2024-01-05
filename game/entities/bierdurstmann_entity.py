@@ -15,7 +15,7 @@
 
 import pygame, copy, math, os, enum, random
 from typing import List
-from .boxes_entity import TrashBin, Portal
+from .boxes_entity import TrashBin, Portal, Pfandautomat
 from ..utils.sprite_utils import load_sprite, load_sprite_with_sprite_size
 from ..utils.params import *
 from ..utils.utils import interpolate
@@ -25,6 +25,7 @@ class INTERACTION_TYPES(enum.Enum):
     TRASH_BIN_INTERACTION = 1
     OTHER_PLAYER_INTERACTION = 2
     PORTAL_INTERACTION = 3
+    PFAND_AUTOMAT_INTERACTION = 4
 
 
 class InteractionBox(pygame.sprite.Sprite):
@@ -47,7 +48,10 @@ class InteractionBox(pygame.sprite.Sprite):
                 content = {"destination": obj.destination}
                 msg = None
                 return {"type": INTERACTION_TYPES.PORTAL_INTERACTION, "msg": msg, "content": content}
-            
+            elif isinstance(obj, Pfandautomat):
+                obj.interact()
+                return {"type": INTERACTION_TYPES.PFAND_AUTOMAT_INTERACTION, "msg": None, "content": None}
+
         return {"type": INTERACTION_TYPES.UNDEFINED, "msg": None, "content": None}
         
 
