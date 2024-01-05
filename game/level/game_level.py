@@ -57,6 +57,9 @@ class GameLevel(BaseLevel):
         self.interaction_box_group = pygame.sprite.GroupSingle()
 
         self.current_world = GAME_WORLDS.NORMAL_WORLD 
+        self.sound = pygame.mixer.Sound("game/assets/sounds/background_music.wav")
+        self.sound.set_volume(0.5)
+        self.sound.play(-1)
 
         self.map_group = pygame.sprite.GroupSingle()
         self.collisionbox_groups = pygame.sprite.Group()
@@ -76,6 +79,10 @@ class GameLevel(BaseLevel):
         self.info_panel = GameInfoPanel(self.info_panel_group)
         self.inventory = InventoryMenu(self.inventory_menu_group)
         self.interaction_textbox = InteractionTextBox(self.interaction_text_group)
+
+        ## Transition:
+        self.start_transition = False
+        self.transition_timer = 0
 
         self.camera = CameraGroup()
         self._init()
@@ -97,11 +104,72 @@ class GameLevel(BaseLevel):
             pass
         elif self.show_inventory:
             self.inventory_menu_group.update(self.player.inventory)
+        # elif self.start_transition:
+        #     self.transition_timer += 10
+        #     if self.transition_timer > 255:
+        #         pass
+        #         # self.start_transition = False
         else:
-            self.map_group.update()
-            self.trash_bins_group.update(dt)
-            self.player_group.update(dt, events, [self.collisionbox_groups, self.trash_bins_group])
+
+            ## Depended on the current map, only the relevant sprites needs to be updated:
+            if self.current_world == GAME_WORLDS.NORMAL_WORLD:
+                self.map_group.update()
+                self.trash_bins_group.update(dt)
+                self.player_group.update(dt, events, [self.collisionbox_groups, self.trash_bins_group])
+            
+            
             self._update_panel()
+
+    def _draw_transition(self, screen):
+
+        # Farben definieren
+        transparent = (0, 0, 0, 0)
+        semi_transparent_black = (0, 0, 0, 240)
+
+        # Rechteck erstellen, um den gesamten Bildschirm zu füllen
+        rect = pygame.Rect(0, 0, WIDTH, HEIGHT)
+
+        # Kreis erstellen (Position, Radius)
+        
+        circle_radius = 100
+        circle_pos = (WIDTH_H -circle_radius, HEIGHT_H- circle_radius)
+
+
+        background = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        background.fill(semi_transparent_black)
+
+        circle_surface = pygame.Surface((circle_radius * 2, circle_radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(circle_surface, 'white', (circle_radius, circle_radius), circle_radius)
+
+        circle_mask = pygame.mask.from_surface(circle_surface)
+        # for i in circle_mask:
+        #     print(i)
+        # print(circle_mask)
+        # background.set_at()
+
+        # Maske auf die Hintergrund-Surface anwenden, um den Kreis freizugeben
+        background.blit(circle_surface, circle_pos)
+        background.set_colorkey('white')
+
+        screen.blit(background, (0, 0))
+
+
+        # transition_image = pygame.Surface((WIDTH, HEIGHT))
+        # transition_image.fill('black')
+        # transition_image.set_alpha(self.transition_timer)
+        # transition_image_rect = transition_image.get_rect(topleft = (0, 0))
+
+        # circle_radius = 50
+        # circle_surface = pygame.Surface((50 * 2, 50 * 2), pygame.SRCALPHA)
+        # pygame.draw.circle(circle_surface, 'white', (WIDTH_H, HEIGHT_H), circle_radius)
+
+        # circle_mask = pygame.mask.from_surface(circle_surface)
+
+
+        # transition_image.blit(circle_surface, self.player.rect.center)
+
+        
+        # screen.blit(transition_image, transition_image_rect)
         
 
     def render(self, screen: pygame.Surface):
@@ -110,6 +178,9 @@ class GameLevel(BaseLevel):
         
 
         self.camera.custom_drawing(self.player_group, screen, self.map_group, self.trash_bins_group, self.interaction_box_group)
+        
+        if self.start_transition:
+            self._draw_transition(screen)
         
         ## Drawing Menus and Panels
         self.info_panel_group.draw(screen)
@@ -137,6 +208,13 @@ class GameLevel(BaseLevel):
     def _handle_events(self, events: List[pygame.event.Event]):
         for e in events:
             if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_t:
+                    if not self.start_transition:
+                        self.start_transition = True
+                        self.transition_timer = 0
+                    else:
+                        self.start_transition = False
+                        self.transition_timer = 0
                 if e.key == pygame.K_q:
                     self.show_menu = True
                 elif e.key == pygame.K_ESCAPE:
@@ -152,7 +230,7 @@ class GameLevel(BaseLevel):
                         self.show_inventory = True
 
     def _init(self):
-        filename = "map_tiled.tmx"
+        filename = "rewe_map.tmx"
         total_path = os.path.join("game", "assets", "tiled_map", filename)
 
         self.tmx_data = load_pygame(total_path)

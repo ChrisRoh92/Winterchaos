@@ -35,3 +35,22 @@ def load_sprite(file, start_col, start_row, num_cols, num_rows, total_rows, tota
             sprites.append(image)
 
     return sprites
+
+
+def load_sprite_with_sprite_size(file, start_col, start_row, num_cols, num_rows, sprite_w, sprite_h, size = None):
+    sheet = pygame.image.load(file).convert_alpha()
+
+    sprites = []
+
+    current_h = 0
+    current_w = 0
+    for row in range(num_rows):
+        current_h = sprite_h * (row + start_row)
+        for col in range(num_cols):
+            current_w = sprite_w * (col + start_col)
+            image = sheet.subsurface(pygame.rect.Rect(current_w, current_h, sprite_w, sprite_h))
+            if size:
+                image = pygame.transform.scale(image, size).convert_alpha()
+            sprites.append(image)
+
+    return sprites

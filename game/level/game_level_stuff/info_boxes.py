@@ -56,11 +56,12 @@ class GameInfoPanel(pygame.sprite.Sprite):
         self.suff_level = 0
         self.bierdurst = 0
 
-        self.font = pygame.font.Font(None, 32)
+        self.font = pygame.font.Font(FONT_PATH, 24)
 
         self._draw_content()
 
     def _draw_content(self):
+        padding_horizontal = 10
         self.image.fill('white')
 
         money_text = self.font.render(f"Geld: {self.money:.2f} €", True, (0, 0, 0))
@@ -69,9 +70,9 @@ class GameInfoPanel(pygame.sprite.Sprite):
 
 
         money_rect = money_text.get_rect()
-        money_rect.midleft = (20, 20)
+        money_rect.midleft = (padding_horizontal, 20)
         sufflevel_rect = sufflevel_text.get_rect()
-        sufflevel_rect.midright = (WIDTH - 20, 20)
+        sufflevel_rect.midright = (WIDTH - padding_horizontal, 20)
         bierdurst_rect = bierdurst_text.get_rect()
         bierdurst_rect.center = (WIDTH_H, 20)
 
@@ -97,8 +98,8 @@ class InteractionTextBox(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.midbottom = (WIDTH_H, HEIGHT - 20)
 
-        self.font = pygame.font.Font(None, 24)
-        self.hintfont = pygame.font.Font(None, 18)
+        self.font = pygame.font.Font(FONT_PATH, 16)
+        self.hintfont = pygame.font.Font(FONT_PATH, 12)
         self.msg = ""
 
     def _draw_message(self):
@@ -147,9 +148,9 @@ class InventoryMenu(pygame.sprite.Sprite):
 
         self.inventory = None
 
-        self.title_font = pygame.font.Font(None, 36)
-        self.content_font = pygame.font.Font(None, 24)
-        self.hint_font = pygame.font.Font(None, 18)
+        self.title_font = pygame.font.Font(FONT_PATH, 24)
+        self.content_font = pygame.font.Font(FONT_PATH, 18)
+        self.hint_font = pygame.font.Font(FONT_PATH, 14)
 
     def _generate_item(self, text_str, subtext_str, image_path):
         width = 150
@@ -159,14 +160,17 @@ class InventoryMenu(pygame.sprite.Sprite):
 
 
         image = pygame.image.load(image_path)
-        image = pygame.transform.scale(image, (96, 96))
+        old_height = image.get_height()
+        target_height = 96 ## TODO: Move to params
+        scale_factor = target_height/old_height
+        image = pygame.transform.scale_by(image, scale_factor)
         image_rect = image.get_rect()
         image_rect.midtop = (width_h, 0)
         y = 100
         text = self.content_font.render(text_str, True, 'black')
         text_rect = text.get_rect()
         text_rect.midtop = (width_h, y)
-        y += (5 + text.get_height())
+        y += (text.get_height())
 
         subtext = self.hint_font.render(subtext_str, True, 'black')
         subtext_rect = subtext.get_rect()
@@ -191,8 +195,8 @@ class InventoryMenu(pygame.sprite.Sprite):
 
         y_start += (padding + title_text.get_height())
 
-        money_surf = self._generate_item(f"{self.inventory.content['money']:.2f} €", "Geld", "game/assets/raw_images/money_coins.webp")
-        beer_surf = self._generate_item(f"{self.inventory.content['beer']}", "Bier", "game/assets/raw_images/beer_icon.webp")
+        money_surf = self._generate_item(f"{self.inventory.content['money']:.2f} €", "Geld", "game/assets/raw_images/coins.png")
+        beer_surf = self._generate_item(f"{self.inventory.content['beer']}", "Bier", "game/assets/raw_images/beer.png")
         ## compute stuff
         content_width = money_surf.get_width() + beer_surf.get_width()
         empty_width = total_width - content_width
@@ -207,9 +211,9 @@ class InventoryMenu(pygame.sprite.Sprite):
 
         y_start += (money_surf.get_height())
 
-        bottle_surf = self._generate_item(f"{self.inventory.content['bottle']}", "Pfand Flaschen", "game/assets/raw_images/Pfandflaschen.webp")
-        can_surf = self._generate_item(f"{self.inventory.content['can']}", "Pfand Dosen", "game/assets/raw_images/pfand_dosen.webp")
-        trash_surf = self._generate_item(f"{self.inventory.content['trash']}", "Müll", "game/assets/raw_images/trash.webp")
+        bottle_surf = self._generate_item(f"{self.inventory.content['bottle']}", "Pfand Flaschen", "game/assets/raw_images/bottles.png")
+        can_surf = self._generate_item(f"{self.inventory.content['can']}", "Pfand Dosen", "game/assets/raw_images/cans.png")
+        trash_surf = self._generate_item(f"{self.inventory.content['trash']}", "Müll", "game/assets/raw_images/trash.png")
         ## compute stuff
         content_width = bottle_surf.get_width() + can_surf.get_width() + trash_surf.get_width()
         empty_width = total_width - content_width

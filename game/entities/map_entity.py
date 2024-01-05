@@ -22,6 +22,9 @@ class Tile(pygame.sprite.Sprite):
     def __init__(self, pos, surf, group):
         super().__init__(group)
         self.image = surf
+        if not surf:
+            print(f"pos: {pos}")
+            print("FOOOOOO")
         self.rect = self.image.get_rect(topleft = pos)
 
 class MapEntity(pygame.sprite.Sprite):
