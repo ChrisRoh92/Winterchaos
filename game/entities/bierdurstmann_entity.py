@@ -131,7 +131,7 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self.rect.center = self.pos
         self.direction = pygame.Vector2()
 
-        self.collision_box = pygame.rect.Rect(5, 5, PLAYER_SIZE - 10, PLAYER_SIZE - 10)
+        self.collision_box = pygame.rect.Rect(5, 5, PLAYER_SIZE - 20, PLAYER_SIZE - 20)
         self.collision_box.center = self.rect.center
         
         self.dir = "left"
@@ -232,61 +232,47 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self.rect.center = (int(self.pos.x), int(self.pos.y))
         self.collision_box.center = self.rect.center
 
+    def _custom_collisioncheck(self, collision):
+
+        if not self.collision_box.colliderect(collision):
+            return None
+
+        delta_links = self.collision_box.right - collision.rect.left
+        delta_rechts = collision.rect.right - self.collision_box.left
+        delta_oben = self.collision_box.bottom - collision.rect.top
+        delta_unten = collision.rect.bottom - self.collision_box.top
+
+        min_delta = min(delta_links, delta_rechts, delta_oben, delta_unten)
+
+        if min_delta == delta_links:
+            self.pos.x = collision.rect.left - (PLAYER_SIZE_H - 10)
+            return "rechts von ego"
+        elif min_delta == delta_rechts:
+            self.pos.x = collision.rect.right + (PLAYER_SIZE_H - 10)
+            return "links von ego"
+        elif min_delta == delta_oben:
+            self.pos.y = collision.rect.top - (PLAYER_SIZE_H - 10)
+            return "unten von ego"
+        else:
+            self.pos.y = collision.rect.bottom + (PLAYER_SIZE_H - 10)
+            return "oben von ego"
+
+
     def _check_collision(self, collisionbox_groups: List[pygame.sprite.Group]):
             for group in collisionbox_groups:
                 collisions = pygame.sprite.spritecollide(self, group, False)
-                if len(collisions) > 0:
-                    ## Always only use the first detected collision for now!
-                    collision = collisions[0]
+                for col in collisions:
+                    if self._custom_collisioncheck(col):
+                        self.rect.center = (int(self.pos.x), int(self.pos.y))
+                        self.collision_box.center = self.rect.center
+                        return
 
-                    collision_point = self.rect.clip(collision.rect)
-                
-                    # print("Kollision an Punkt:", collision_point)
-                    # print("self.rect:", self.rect)
 
-                    
-                    if self.direction.x > 0:
-                        self.pos.x = collision.rect.left - PLAYER_SIZE_H
-                    elif self.direction.x < 0:
-                        self.pos.x = collision.rect.right + PLAYER_SIZE_H
-                    elif self.direction.y > 0:
-                        self.pos.y = collision.rect.top - PLAYER_SIZE_H
-                    elif self.direction.y < 0:
-                        self.pos.y = collision.rect.bottom + PLAYER_SIZE_H
-
-                    self.rect.center = (int(self.pos.x), int(self.pos.y))
-                    self.collision_box.center = self.rect.center
-                    break
-
-                ## check where the player is located with respect to the box
-                # print(f"collision.rect.centerx: {collision.rect.centerx}")
-                # print(f"collision.rect.centery: {collision.rect.centery}")
 
 
 
                 
-                # if collision.rect.centerx > self.pos.x:
-                #     ## box is right to the player
-                #     print(f"collision.rect.left: {collision.rect.left}")
-                #     print(f"self.rect.right: {self.rect.right}")
-                #     if collision.rect.left < self.rect.right:
-                #         self.pos.x = collision.rect.left - PLAYER_SIZE_H
-                # elif collision.rect.centerx < self.pos.x:
-                #     if self.rect.left < collision.rect.right:
-                #         self.pos.x = collision.rect.right + PLAYER_SIZE_H
 
-
-
-
-
-                # if collision.rect.centery > self.pos.y:
-                #     ## box is down to the player
-                #     if self.rect.bottom > collision.rect.top:
-                #         self.pos.y = collision.rect.top - PLAYER_SIZE_H
-                # elif collision.rect.centery < self.pos.y:
-                #     ## box is up to the player
-                #     if self.rect.top < collision.rect.bottom:
-                #         self.pos.y = collision.rect.bottom + PLAYER_SIZE_H
             
     def _move_interaction_box(self):
         new_rect = copy.deepcopy(self.interaction_box.rect)
@@ -335,7 +321,6 @@ class Bierdurstmann(pygame.sprite.Sprite):
         destination = self.portal_destination
         self.portal_destination = None
         return destination
-            
 
     def update_pos(self, pos: pygame.Vector2):
         self.pos = pos
