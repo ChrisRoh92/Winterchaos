@@ -27,6 +27,11 @@ PLAYER_FRAME_FACTOR = 10
 ## Fonts:
 FONT_PATH = "game/assets/fonts/Ubuntu-Regular.ttf"
 
+
+## Map 
+MAIN_WORLD_MAP_FILE = "game/assets/tiled_map/map_tiled.tmx" ## TODO(chrohne): rename
+GROCERY_MAP_FILE = "game/assets/tiled_map/rewe_map.tmx" ## TODO(chrohne): rename
+
 TRASH_BIN_CONTENT_UPDATE_MIN = 5
 TRASH_BIN_CONTENT_UPDATE_MAX = 20
 TRASH_BIN_MAX_MONEY = 1.0

@@ -12,15 +12,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-import pygame, copy, os, enum
+import pygame, copy, os, enum, time
 from pytmx.util_pygame import load_pygame
 from typing import List
 from ..utils.params import *
 from .base_level import BaseLevel
 from ..entities.bierdurstmann_entity import Bierdurstmann
-from ..entities.boxes_entity import CollisionBox, TrashBin
+from ..entities.boxes_entity import CollisionBox, TrashBin, PORTAL_DESTINATION
 from ..entities.map_entity import MapEntity
 from .game_level_stuff.info_boxes import GameMenu, GameInfoPanel, InteractionTextBox, InventoryMenu
+from .game_level_stuff.main_world_scene import GAME_SCENE_STATE
+from .game_level_stuff.main_world_scene import MainWorldScene
+from .game_level_stuff.grocery_world_scene import GroceryWorldScene
+
 
 class GAME_WORLDS(enum.Enum):
     UNDEFINED = 0
@@ -30,6 +34,10 @@ class GAME_WORLDS(enum.Enum):
     AUSNUECHTERUNGSZELLE_WORLD = 4
     HOME_BIERDURSTMANN_WORLD = 5
     WERSTOFFHOF_WORLD = 6
+
+class LEVEL_STATE(enum.Enum):
+    RUNNING = 1
+    TRANSITION = 2
 
 class CameraGroup:
     def __init__(self):
@@ -50,20 +58,20 @@ class CameraGroup:
         screen.blit(player_group.sprite.image, offset_rect)
 
 
+
+
 class GameLevel(BaseLevel):
     def __init__(self):
-        self.player_group = pygame.sprite.GroupSingle()
-        ## TODO: could the next GroupSingle live in Bierdurstmann class?
-        self.interaction_box_group = pygame.sprite.GroupSingle()
 
-        self.current_world = GAME_WORLDS.NORMAL_WORLD 
-        self.sound = pygame.mixer.Sound("game/assets/sounds/background_music.wav")
-        self.sound.set_volume(0.5)
-        self.sound.play(-1)
+        # start_time = time.time_ns()
 
-        self.map_group = pygame.sprite.GroupSingle()
-        self.collisionbox_groups = pygame.sprite.Group()
-        self.trash_bins_group = pygame.sprite.Group()
+        self.camera = CameraGroup()
+        self.current_world = GAME_WORLDS.NORMAL_WORLD
+        self.level_state = LEVEL_STATE.RUNNING
+        self.scenes = {
+            GAME_WORLDS.NORMAL_WORLD : None,
+            GAME_WORLDS.REWE_WORLD : None
+        }
 
         ## Text and Menus
         self.menu_group = pygame.sprite.GroupSingle()
@@ -80,12 +88,14 @@ class GameLevel(BaseLevel):
         self.inventory = InventoryMenu(self.inventory_menu_group)
         self.interaction_textbox = InteractionTextBox(self.interaction_text_group)
 
-        ## Transition:
-        self.start_transition = False
-        self.transition_timer = 0
-
-        self.camera = CameraGroup()
+        
+        self.transition_alpha = 0
+        
         self._init()
+
+        # end_time = time.time_ns()
+        # duration = (end_time - start_time) / (1000**2)
+        # print(f"duration loading: {duration}")
 
     # ------------------------- #
     # 'Public Methods'          #
@@ -104,23 +114,24 @@ class GameLevel(BaseLevel):
             pass
         elif self.show_inventory:
             self.inventory_menu_group.update(self.player.inventory)
-        # elif self.start_transition:
-        #     self.transition_timer += 10
-        #     if self.transition_timer > 255:
-        #         pass
-        #         # self.start_transition = False
         else:
+            if self.level_state == LEVEL_STATE.RUNNING:
+                self.scenes[self.current_world].update(dt, events)           
+                self._update_panel()
+            elif self.level_state == LEVEL_STATE.TRANSITION:
+                self.transition_alpha += 10
 
-            ## Depended on the current map, only the relevant sprites needs to be updated:
-            if self.current_world == GAME_WORLDS.NORMAL_WORLD:
-                self.map_group.update()
-                self.trash_bins_group.update(dt)
-                self.player_group.update(dt, events, [self.collisionbox_groups, self.trash_bins_group])
-            
-            
-            self._update_panel()
+            self._run_state_machine()
 
     def _draw_transition(self, screen):
+        color = (0, 0, 0, self.transition_alpha)
+        background = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+        background.fill(color)
+
+
+        screen.blit(background, (0, 0))
+
+    def _foo_testing(self, screen):
 
         # Farben definieren
         transparent = (0, 0, 0, 0)
@@ -175,11 +186,10 @@ class GameLevel(BaseLevel):
     def render(self, screen: pygame.Surface):
         ## Delete content
         screen.fill('black')
-        
 
-        self.camera.custom_drawing(self.player_group, screen, self.map_group, self.trash_bins_group, self.interaction_box_group)
-        
-        if self.start_transition:
+
+        self.scenes[self.current_world].render(screen)
+        if self.level_state == LEVEL_STATE.TRANSITION:
             self._draw_transition(screen)
         
         ## Drawing Menus and Panels
@@ -208,13 +218,6 @@ class GameLevel(BaseLevel):
     def _handle_events(self, events: List[pygame.event.Event]):
         for e in events:
             if e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_t:
-                    if not self.start_transition:
-                        self.start_transition = True
-                        self.transition_timer = 0
-                    else:
-                        self.start_transition = False
-                        self.transition_timer = 0
                 if e.key == pygame.K_q:
                     self.show_menu = True
                 elif e.key == pygame.K_ESCAPE:
@@ -229,35 +232,42 @@ class GameLevel(BaseLevel):
                     if not self.show_inventory:
                         self.show_inventory = True
 
+
     def _init(self):
-        filename = "rewe_map.tmx"
-        total_path = os.path.join("game", "assets", "tiled_map", filename)
 
-        self.tmx_data = load_pygame(total_path)
-        self.tmx_layers = self.tmx_data.layers
-        self.tmx_objectgroups = self.tmx_data.objectgroups
-        self.tmx_w = self.tmx_data.width
-        self.tmx_h = self.tmx_data.height
+        self.player = Bierdurstmann(pygame.Vector2(), None, self.show_interaction_box)
+
+        self.scenes[GAME_WORLDS.NORMAL_WORLD] = MainWorldScene(self.camera, None, MAIN_WORLD_MAP_FILE)
+        self.scenes[GAME_WORLDS.REWE_WORLD] = GroceryWorldScene(self.camera, None, GROCERY_MAP_FILE)
+
+        self._init_state_machine()
 
 
-        
-        self.map = MapEntity(self.tmx_layers, self.tmx_w, self.tmx_h, self.map_group)
+    # ------------------------- #
+    # 'State Machine'           #
+    # ------------------------- #
+    def _init_state_machine(self):
+        self.scenes[self.current_world].init_scene(self.player)
 
-        self._load_and_init_objects()
+    def _transition_to_new_state(self, new_state: GAME_WORLDS):
+        self.scenes[self.current_world].teardown()
+        self.current_world = new_state
+        self.scenes[self.current_world].init_scene(self.player)
 
-    def _load_and_init_objects(self):
-        for group in self.tmx_objectgroups:
-            if group.name == "collision_boxes":
-                for obj in group:
-                    pos = (obj.x, obj.y)
-                    size = (obj.width, obj.height)
-                    CollisionBox(pos, size, self.collisionbox_groups)
-            elif group.name == "trash_buckets":
-                for obj in group:
-                    pos = (obj.x, obj.y)
-                    surf = obj.image
-                    TrashBin(pos, surf, self.trash_bins_group)
-            elif group.name == "player":
-                obj = group[0]
-                pos = pygame.Vector2(obj.x, obj.y)
-                self.player = Bierdurstmann(pos, self.player_group, self.interaction_box_group, self.show_interaction_box)
+    def _run_state_machine(self):
+        # print(f"self.level_state: {self.level_state}")
+        if self.level_state == LEVEL_STATE.RUNNING:
+            if self.scenes[self.current_world].state == GAME_SCENE_STATE.TRANSITION_TO:
+                self.level_state = LEVEL_STATE.TRANSITION
+        elif self.level_state == LEVEL_STATE.TRANSITION:
+            if self.transition_alpha > 255:
+                self.level_state = LEVEL_STATE.RUNNING
+                self.transition_alpha = 0
+                destination = self.scenes[self.current_world].destination
+                print(destination)
+                if destination == PORTAL_DESTINATION.TO_NORMAL_WORLD:
+                    self._transition_to_new_state(GAME_WORLDS.NORMAL_WORLD)
+                elif destination == PORTAL_DESTINATION.TO_REWE_WOLRD:
+                    self._transition_to_new_state(GAME_WORLDS.REWE_WORLD)
+                
+

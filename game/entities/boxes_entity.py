@@ -18,6 +18,16 @@ from typing import List
 from ..utils.sprite_utils import load_sprite
 from ..utils.params import *
 
+class PORTAL_DESTINATION(enum.Enum):
+    TO_NORMAL_WORLD = 1
+    TO_REWE_WOLRD = 2
+
+def map_str_destination(destination: str)-> PORTAL_DESTINATION:
+    if destination == "to_main_world":
+        return PORTAL_DESTINATION.TO_NORMAL_WORLD
+    elif destination == "to_rewe_world":
+        return PORTAL_DESTINATION.TO_REWE_WOLRD
+
 class CollisionBox(pygame.sprite.Sprite):
     def __init__(self, pos, size, group):
         super().__init__(group)
@@ -113,3 +123,13 @@ class TrashBin(pygame.sprite.Sprite):
             self.renew_time = random.randint(TRASH_BIN_CONTENT_UPDATE_MIN, TRASH_BIN_CONTENT_UPDATE_MAX)
             self._update_content()
 
+class Portal(pygame.sprite.Sprite):
+    def __init__(self, pos, size, group, destination: str):
+        super().__init__(group)
+
+        self.destination = map_str_destination(destination)
+
+        self.image = pygame.Surface(size, pygame.SRCALPHA)
+        self.image.fill('red')
+        self.rect = self.image.get_rect()
+        self.rect.topleft = pos

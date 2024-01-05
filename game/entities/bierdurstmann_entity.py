@@ -15,7 +15,7 @@
 
 import pygame, copy, math, os, enum, random
 from typing import List
-from .boxes_entity import TrashBin
+from .boxes_entity import TrashBin, Portal
 from ..utils.sprite_utils import load_sprite, load_sprite_with_sprite_size
 from ..utils.params import *
 from ..utils.utils import interpolate
@@ -24,6 +24,7 @@ class INTERACTION_TYPES(enum.Enum):
     UNDEFINED = 0
     TRASH_BIN_INTERACTION = 1
     OTHER_PLAYER_INTERACTION = 2
+    PORTAL_INTERACTION = 3
 
 
 class InteractionBox(pygame.sprite.Sprite):
@@ -35,17 +36,17 @@ class InteractionBox(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
 
-        self.sound = pygame.mixer.Sound("game/assets/sounds/garbage_sound.wav")
-        self.sound.set_volume(0.5)
-
     def check(self, group: pygame.sprite.Group):
         collisions = pygame.sprite.spritecollide(self, group, False)
         if len(collisions) > 0:
             obj = collisions[0]
             if isinstance(obj, TrashBin):
                 content, msg = obj.interact()
-                self.sound.play()
                 return {"type": INTERACTION_TYPES.TRASH_BIN_INTERACTION, "msg": msg, "content": content}
+            elif isinstance(obj, Portal):
+                content = {"destination": obj.destination}
+                msg = None
+                return {"type": INTERACTION_TYPES.PORTAL_INTERACTION, "msg": msg, "content": content}
             
         return {"type": INTERACTION_TYPES.UNDEFINED, "msg": None, "content": None}
         
@@ -107,16 +108,19 @@ class Bierdurstmann(pygame.sprite.Sprite):
             self, 
             pos: pygame.Vector2, 
             group: pygame.sprite.GroupSingle, 
-            interaction_box_group: pygame.sprite.GroupSingle,
             show_message: callable):
-        super().__init__(group)
-
+        if group:
+            super().__init__(group)
+        else:
+            super().__init__()
         self.pos = copy.deepcopy(pos)
         self.show_message = show_message
-        self.interaction_box = InteractionBox(self.pos, interaction_box_group)
+        self.interaction_box_group = pygame.sprite.GroupSingle()
+        self.interaction_box = InteractionBox(self.pos, self.interaction_box_group)
 
         self.inventory = BierdurstmannInventory()
         self.state = BierdurstmannState()
+        self.portal_destination = None
         
         self.image = pygame.Surface((PLAYER_SIZE, PLAYER_SIZE), pygame.SRCALPHA)
         self.rect = self.image.get_rect()
@@ -280,15 +284,6 @@ class Bierdurstmann(pygame.sprite.Sprite):
                 #     if self.rect.top < collision.rect.bottom:
                 #         self.pos.y = collision.rect.bottom + PLAYER_SIZE_H
             
-                
-
-                
-    
-
-
-
-
-
     def _move_interaction_box(self):
         new_rect = copy.deepcopy(self.interaction_box.rect)
         if self.direction.x > 0:
@@ -301,20 +296,25 @@ class Bierdurstmann(pygame.sprite.Sprite):
             new_rect.bottomleft = self.rect.topleft
         self.interaction_box.rect = new_rect
 
-    def _check_interaction(self, collisionbox_groups: List[pygame.sprite.Group]):
-        data = self.interaction_box.check(collisionbox_groups[1])
+    def _check_interaction(self, collisionbox_groups: pygame.sprite.Group):
+        data = self.interaction_box.check(collisionbox_groups)
         return data
     
-    def _handle_post_interaction(self, data: dict):
-        if data['type'] == INTERACTION_TYPES.TRASH_BIN_INTERACTION:
-            self.inventory.add_trash_bin_content(data['content'])
-            self.show_message(data['msg'])
-        elif data['type'] == INTERACTION_TYPES.OTHER_PLAYER_INTERACTION:
+    def _handle_post_interaction(self, interaction_data: dict, portal_data:dict):
+        if interaction_data['type'] == INTERACTION_TYPES.TRASH_BIN_INTERACTION:
+            self.inventory.add_trash_bin_content(interaction_data['content'])
+            self.show_message(interaction_data['msg'])
+        elif interaction_data['type'] == INTERACTION_TYPES.OTHER_PLAYER_INTERACTION:
             pass
         else:
             pass
 
-    def update(self, dt, events: List[pygame.event.Event], collisionbox_groups: List[pygame.sprite.Group]):
+        if portal_data['type'] == INTERACTION_TYPES.PORTAL_INTERACTION:
+            self.portal_destination = portal_data['content']['destination']
+        else:
+            pass
+
+    def update(self, dt, events: List[pygame.event.Event], collisionbox_groups: List[pygame.sprite.Group], interaction_group: pygame.sprite.Group, portal_group: pygame.sprite.Group):
         self.timstamp += dt
         self._handle_inputs(events)
         self._move(dt)
@@ -323,10 +323,19 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self._move_interaction_box()
         self.state.update(dt)
         if self.interact:
-            data = self._check_interaction(collisionbox_groups)
-            self._handle_post_interaction(data)
+            interaction_data = self._check_interaction(interaction_group)
+            portal_data = self._check_interaction(portal_group)
+            self._handle_post_interaction(interaction_data, portal_data)
+
+    def get_portal_destination(self):
+        destination = self.portal_destination
+        self.portal_destination = None
+        return destination
             
 
+    def update_pos(self, pos: pygame.Vector2):
+        self.pos = pos
+        self.rect.center = self.pos
 
     def get_data(self):
         return self.inventory.content['money'],  self.state.bierdurst, self.state.suff
