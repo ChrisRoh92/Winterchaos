@@ -15,6 +15,8 @@ pip install -r requirements.txt
 
 ```
 python3 main.py
+## or
+python main.py
 ```
 
 ## How to play
