@@ -9,9 +9,14 @@ pip3 install -r requirements.txt
 
 pip install -r requirements.txt
 ```
-
+## Download assets for the game (sprites, etc)
+ ```
+ ./download_and_auth.sh
+ ```
 
 ## How to run the code
+
+Please make sure to download the assets before
 
 ```
 python3 main.py

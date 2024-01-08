@@ -1,0 +1,30 @@
+# Python Bytecode
+__pycache__/
+
+# IDE files
+.vscode/
+.idea/
+
+# Pygame log files
+pygame.log
+
+# Compiled files
+*.pyc
+*.pyo
+__pycache__
+
+# Virtual environments
+venv/
+env/
+
+## Dont track assets
+game/assets/
+
+# Custom configuration files
+config.ini  # Adjust this according to your configuration file
+
+# Temporary files
+*.bak
+*.swp
+*~
+
