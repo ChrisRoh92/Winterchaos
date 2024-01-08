@@ -22,7 +22,7 @@ FPS = 60
 PLAYER_SIZE = 48
 PLAYER_SIZE_H = PLAYER_SIZE // 2
 PLAYER_SPEED = 200
-PLAYER_FRAME_FACTOR = 10
+PLAYER_FRAME_FACTOR = 20
 
 ## Fonts:
 FONT_PATH = "game/assets/fonts/Ubuntu-Regular.ttf"

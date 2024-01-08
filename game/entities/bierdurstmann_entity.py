@@ -107,20 +107,35 @@ class BierdurstmannState:
             self.suff -= 1
             self.suff = max(0, self.suff)
 
+class EmoteBox(pygame.sprite.Sprite):
+    def __init__(self, pos, group):
+        super().__init__(group)
+
+        self.image = pygame.Surface((PLAYER_SIZE, PLAYER_SIZE))
+        self.image.fill("white")
+        self.rect = self.image.get_rect()
+        self.rect.midbottom = (pos.x, pos.y + PLAYER_SIZE)
+
 class Bierdurstmann(pygame.sprite.Sprite):
     def __init__(
             self, 
             pos: pygame.Vector2, 
-            group: pygame.sprite.GroupSingle, 
+            group: pygame.sprite.GroupSingle,
             show_message: callable):
         if group:
             super().__init__(group)
         else:
             super().__init__()
+
+
+        # self.draw_group = draw_group
+        
         self.pos = copy.deepcopy(pos)
         self.show_message = show_message
         self.interaction_box_group = pygame.sprite.GroupSingle()
         self.interaction_box = InteractionBox(self.pos, self.interaction_box_group)
+        self.emote_box_group = pygame.sprite.GroupSingle()
+        self.emote_box = EmoteBox(self.pos, self.emote_box_group)
 
         self.inventory = BierdurstmannInventory()
         self.state = BierdurstmannState()
@@ -209,8 +224,8 @@ class Bierdurstmann(pygame.sprite.Sprite):
             self.time = 0
             
     def _move(self, dt):
-        reduce_speed_factor = interpolate(self.state.suff, 0, 10, 1.0, 0.1)
-        self.pos += self.direction * PLAYER_SPEED * dt * self.speed_factor * reduce_speed_factor
+        self.reduce_speed_factor = interpolate(self.state.suff, 0, 10, 1.0, 0.4)
+        self.pos += self.direction * PLAYER_SPEED * dt * self.speed_factor * self.reduce_speed_factor
         ## Handle Suff Level
         if self.state.suff > 0:
             sin_value = math.sin(self.timstamp * 1.0 * self.state.suff) * 1 + math.cos(self.timstamp * 1.0/self.state.suff) * 2
@@ -221,7 +236,7 @@ class Bierdurstmann(pygame.sprite.Sprite):
                 self.pos.x += sin_value * amplitude
 
     def _animate(self, dt):
-        self.time += dt * PLAYER_FRAME_FACTOR * self.speed_factor
+        self.time += dt * PLAYER_FRAME_FACTOR * self.speed_factor * self.reduce_speed_factor
         self.current_frame = math.floor(self.time)
         if self.current_frame > len(self.sprites[self.dir])-1:
             self.time = 0
