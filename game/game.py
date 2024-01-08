@@ -24,15 +24,18 @@ class Game:
         pygame.init()
 
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("Winterchaos")
+        pygame.display.set_caption("Winterchaos - Gut/Schlecht?")
 
         self.clock = pygame.time.Clock()
         self.dt = self.clock.tick(FPS) / 1000.0
 
         self.events = pygame.event.get()
 
-        self.current_level = GameLevel()
+        self.current_level = MainMenuLevel(self._start_game)
         self.running = True
+
+    def _start_game(self):
+        self.current_level = GameLevel()
 
     def run(self):
         while self.running:
