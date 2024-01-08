@@ -27,6 +27,8 @@ python main.py
 ## How to play
 Use 'WASD' keys to control the player
 
+Press "Shift" while using 'WASD' to let the player run
+
 Use 'b' to drink a beer
 
 Use 'i' to have a look into the inventory
