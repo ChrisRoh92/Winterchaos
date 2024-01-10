@@ -31,11 +31,14 @@ class Game:
 
         self.events = pygame.event.get()
 
-        self.current_level = MainMenuLevel(self._start_game)
+        self.current_level = MainMenuLevel(self._start_game, self._stop_game)
         self.running = True
 
     def _start_game(self):
         self.current_level = GameLevel()
+
+    def _stop_game(self):
+        self.running = False
 
     def run(self):
         while self.running:

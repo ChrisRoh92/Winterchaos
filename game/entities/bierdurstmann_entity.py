@@ -228,12 +228,12 @@ class Bierdurstmann(pygame.sprite.Sprite):
         self.pos += self.direction * PLAYER_SPEED * dt * self.speed_factor * self.reduce_speed_factor
         ## Handle Suff Level
         if self.state.suff > 0:
-            sin_value = math.sin(self.timstamp * 1.0 * self.state.suff) * 1 + math.cos(self.timstamp * 1.0/self.state.suff) * 2
+            sin_value = math.sin(self.timstamp * 1.0 * self.state.suff) * 1 + math.cos(self.timstamp * 1.0/self.state.suff) * 0.2
             amplitude = interpolate(self.state.suff, 0, 10, 0, 2)
             if abs(self.direction.x) > 0:
-                self.pos.y += sin_value * amplitude
+                self.pos.y += sin_value * amplitude * self.reduce_speed_factor
             elif abs(self.direction.y) > 0:
-                self.pos.x += sin_value * amplitude
+                self.pos.x += sin_value * amplitude * self.reduce_speed_factor
 
     def _animate(self, dt):
         self.time += dt * PLAYER_FRAME_FACTOR * self.speed_factor * self.reduce_speed_factor
