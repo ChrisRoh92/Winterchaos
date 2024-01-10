@@ -92,8 +92,14 @@ class BierdurstmannState:
 
     def _play_beer_sound(self):
         self.index = random.randint(0, (len(self.sound_files) - 1))
-        self.sound = pygame.mixer.Sound(self.sound_files[self.index])
-        self.sound.play()
+        if pygame.mixer.get_busy():
+            self.sound.stop()
+            self.sound = pygame.mixer.Sound(self.sound_files[self.index])
+            self.sound.play()
+        else:
+            self.sound = pygame.mixer.Sound(self.sound_files[self.index])
+            self.sound.play()
+
 
     def drink_beer(self):
         self.suff += 1
@@ -230,10 +236,15 @@ class Bierdurstmann(pygame.sprite.Sprite):
         if self.state.suff > 0:
             sin_value = math.sin(self.timstamp * 1.0 * self.state.suff) * 1 + math.cos(self.timstamp * 1.0/self.state.suff) * 0.2
             amplitude = interpolate(self.state.suff, 0, 10, 0, 2)
-            if abs(self.direction.x) > 0:
+            if self.direction.magnitude() > 0:
                 self.pos.y += sin_value * amplitude * self.reduce_speed_factor
-            elif abs(self.direction.y) > 0:
                 self.pos.x += sin_value * amplitude * self.reduce_speed_factor
+            # if abs(self.direction.x) > 0:
+            #     self.pos.y += sin_value * amplitude * self.reduce_speed_factor
+            #     self.pos.x += sin_value * amplitude * self.reduce_speed_factor
+            # elif abs(self.direction.y) > 0:
+            #     self.pos.y += sin_value * amplitude * self.reduce_speed_factor
+            #     self.pos.x += sin_value * amplitude * self.reduce_speed_factor
 
     def _animate(self, dt):
         self.time += dt * PLAYER_FRAME_FACTOR * self.speed_factor * self.reduce_speed_factor
